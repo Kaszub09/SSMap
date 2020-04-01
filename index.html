@@ -202,7 +202,7 @@
 
                 catInfo.groups.forEach((item) => {
                     var catItem = document.createElement("li");
-                    catItem.innerHTML = "<img class='group-icon' src='images/MarkerIcons/" + item.icon + "' ><span class='group-name'>" + item.name + "</span><span class='group-count'>" + item.count + "</span>";
+                    catItem.innerHTML = "<img class='group-icon' src='images/markerIcons/" + item.icon + "' ><span class='group-name'>" + item.name + "</span><span class='group-count'>" + item.count + "</span>";
                     catItem.className = "group";
                     list.appendChild(catItem);
                     item.layer.addTo(map);

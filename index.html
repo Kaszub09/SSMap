@@ -1,0 +1,505 @@
+﻿<!DOCTYPE html>
+<html style="height: 100%;">
+<head>
+    <title>Salt & Sanctuary Map</title>
+    <link rel="stylesheet" href="scripts/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="styles/leftMenu.css" />
+    <link rel="stylesheet" href="styles/editablepopup.css" />
+    <link rel="stylesheet" href="scripts/context-menu.css" />
+    <link rel="stylesheet" href="fontsawesome/css/fas.min.css" />
+    <script src="scripts/leaflet/leaflet.js"></script>
+    <script src="scripts/context-menu.min.js"></script>
+    <script src="markers.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body style="height: 100%; margin: 0;">
+
+    <!-- Remove to enable saving and adding markers
+    <button id="asd" onclick="SaveAllMarkers()">Save</button>
+    <button onclick="AddMarker()">Add Marker</button>-->
+    <div id="ssmap" style='width: 100%; height: 100%; background: #000000;'></div>
+    <div id="sideMenu">
+        <div id="left-sidebar" class="resizable left-sidebar">
+            <div>
+                <span id="login-icon" class="login-icon">
+                    <i class="fas fa-user" style="font-size:18px; color: #c3c3c3; padding-top:8px; "></i>
+                </span>
+                <span id="search" class="search">
+                    <i class="fas fa-search" style="font-size:18px; color: #c3c3c3; padding-top:8px; padding-left:8px;"></i>
+                    <input id="search-box" type="text" class="search-box" placeholder="Search..." autocomplete="off" />
+                    <i id="searching-icon" class="fas fa-circle-notch fa-spin" style="font-size:18px; color: #c3c3c3; display:none; "></i>
+                    <span id="close-button"><i class="fas fa-times" style="font-size:18px; color: #c3c3c3; padding-top:8px; "></i></span>
+                </span>
+            </div>
+            <div class="header" style="display: flex;align-items: center;">
+                <img src="images/Icons/ssIcon.ico" style="padding-left:8px;height:48px" /><h1 style="padding-left:12px;" />Salt & Sanctuary Map</h1>
+            </div>
+            <div>
+                <div id="LayersPanel" style="width: inherit; padding:10px; overflow-y:auto;max-height:400px;">
+
+                </div>
+                <table id="LoginForm" style="display:none; text-align: center;">
+                    <tr>
+                        <td>
+                            TO-DO: Login
+                        </td>
+                    </tr>
+                </table>
+                <div id="search-results-panel" class="search-results-panel">
+                    <div>
+                        <span id="results-back">
+                            <i class="fas fa-angle-left" style="font-size:26px; color: #c3c3c3;"></i>
+                        </span>
+                        <div id="results-number"></div>
+                    </div>
+                    <div id="results" class="results">
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <div id="left-sidebar-close-button" class="left-sidebar-close-button">
+        </div>
+    </div>
+
+    <!-- ELEMENTS FUNCTIONS -->
+    <script>
+        document.getElementById('login-icon').onclick = () => {
+            document.getElementById("login-icon").classList.toggle("clicked");
+            if (document.getElementById("LoginForm").style.display == "none") {
+                document.getElementById("LoginForm").style.display = "block";
+                document.getElementById("LayersPanel").style.display = "none";
+            }
+            else {
+                document.getElementById("LayersPanel").style.display = "block";
+                document.getElementById("LoginForm").style.display = "none";
+            }
+        }
+        document.getElementById('left-sidebar-close-button').onclick = () => document.getElementById("left-sidebar").classList.toggle("sidebar-closed");
+        document.getElementById('close-button').onclick = () => {
+            document.getElementById("search-box").value = "";
+            document.getElementById("LayersPanel").style.display = "block";
+            document.getElementById("search-results-panel").style.display = "none";
+        }
+        document.getElementById('results-back').onclick = () => {
+            document.getElementById("search-box").value = "";
+            document.getElementById("LayersPanel").style.display = "block";
+            document.getElementById("search-results-panel").style.display = "none";
+        }
+    </script>
+
+    <!--DECLARATIONS-->
+    <script>
+        var allCategories = [];
+        var allGroups = [];
+        var AllMarkers = [];
+        var map;
+        const menu = new ContextMenu({
+            'theme': 'default',
+            'items': [{ 'icon': 'check', 'name': 'Mark as completed', action: () => { } }, { 'icon': 'link', 'name': 'Copy link to marker', action: () => { } },
+            { 'icon': 'edit', 'name': 'Edit', action: () => { } },]
+        });
+        var LocationMarkers = [];
+        var locationLayer;
+    </script>
+
+    <!-- FUNCTIONS-->
+    <script>
+        function openContextMenu(evt) {
+            const time = menu.isOpen() ? 100 : 0;
+            menu.hide();
+            setTimeout(() => { menu.show(evt.originalEvent.pageX, evt.originalEvent.pageY) }, time);
+            document.addEventListener('click', hideContextMenu, false);
+            menu.menu.children[1].onclick = () => {
+                var dummy = document.createElement("textarea");
+                document.body.appendChild(dummy);
+                dummy.value = window.location.href.indexOf('?') < 0 ? window.location.href : window.location.href.substring(0, window.location.href.indexOf('?'));
+                dummy.value += "?markerId=" + evt.target.options.id + "&zoom=" + map.getZoom();
+                dummy.select();
+                document.execCommand("copy");
+                document.body.removeChild(dummy);
+            }
+            menu.menu.children[2].onclick = () => EditablePopup(evt.target);
+        }
+        function hideContextMenu(evt) {
+            menu.hide();
+            document.removeEventListener('click', hideContextMenu);
+        }
+        function loadMarkersIntoCategories() {
+            allCategories = [];
+            allGroups = [];
+
+            AllMarkers.forEach((item) => {
+                var group = allGroups.find((e) => { return e.name == item.options.group });
+                if (typeof group == 'undefined') {
+                    group = {
+                        name: item.options.group,
+                        visible: true,
+                        catName: item.options.category,
+                        icon: "icon",
+                        count: 0,
+                        layer: L.layerGroup()
+                    }
+                    allGroups.push(group);
+                }
+                item.addTo(group.layer);
+                group.count++;
+                group.icon = item.options.icoPath;
+            });
+
+            allGroups.forEach((item) => {
+                var cat = allCategories.find((e) => { return e.name == item.catName });
+                if (typeof cat == 'undefined') {
+                    cat = {
+                        name: item.catName,
+                        groups: []
+                    }
+                    allCategories.push(cat);
+                }
+                cat.groups.push(item);
+            });
+            locationLayer = L.layerGroup();
+            LocationMarkers.forEach((item) => { item.addTo(locationLayer); });
+        }
+
+        function loadCategoriesIntoMap() {
+            var showAll = document.createElement("span");
+            var hideAll = document.createElement("span");
+            var locations = document.createElement("div");
+            locations.className = "group";
+            locations.style = "width:100px; text-align:center; margin:0 auto;"
+            locations.innerHTML = "Locations";
+            map.addLayer(locationLayer);
+            locations.onclick = (e) => {
+                if (locations.classList.contains("strikeout"))
+                    map.addLayer(locationLayer);
+                else
+                    map.removeLayer(locationLayer);
+                locations.classList.toggle("strikeout");
+            }
+            showAll.innerHTML = "Show All";
+            hideAll.innerHTML = "Hide All";
+            hideAll.style = "float:right";
+            showAll.style = "float:left";
+            hideAll.className = showAll.className = "change-all";
+            showAll.onclick = clickAll(true);
+            hideAll.onclick = clickAll(false);
+            document.getElementById("LayersPanel").appendChild(showAll);
+            document.getElementById("LayersPanel").appendChild(hideAll);
+            document.getElementById("LayersPanel").appendChild(locations);
+            document.getElementById("LayersPanel").appendChild(document.createElement("hr"));
+
+            for (var i = 0; i < allCategories.length; i++) {
+                var catInfo = allCategories[i];
+                var category = document.createElement("div");
+                category.innerHTML = catInfo.name;
+                category.className = "category";
+                var list = document.createElement("ul");
+                document.getElementById("LayersPanel").appendChild(category);
+                document.getElementById("LayersPanel").appendChild(list);
+
+                catInfo.groups.forEach((item) => {
+                    var catItem = document.createElement("li");
+                    catItem.innerHTML = "<img class='group-icon' src='images/MarkerIcons/" + item.icon + "' ><span class='group-name'>" + item.name + "</span><span class='group-count'>" + item.count + "</span>";
+                    catItem.className = "group";
+                    list.appendChild(catItem);
+                    item.layer.addTo(map);
+                    catItem.onclick = (e) => {
+                        catItem.classList.toggle("strikeout");
+                        if (item.visible == true)
+                            map.removeLayer(item.layer);
+                        else
+                            item.layer.addTo(map);
+                        item.visible = !item.visible;
+                    }
+                });
+                category.onclick = categoryClick(list.children);
+            }
+            hideAll.click();
+            locations.click();
+            map.setZoom(2);
+            function categoryClick(groupList) {
+                return function () {
+                    var atLeastOneOn = false;
+                    for (var i = 0; i < groupList.length; i++)
+                        if (!groupList[i].classList.contains("strikeout")) {
+                            atLeastOneOn = true; break;
+                        }
+                    if (atLeastOneOn) {
+                        for (var i = 0; i < groupList.length; i++)
+                            if (!groupList[i].classList.contains("strikeout"))
+                                groupList[i].click();
+                    }
+                    else {
+                        for (var i = 0; i < groupList.length; i++)
+                            groupList[i].click();
+                    }
+                };
+            }
+
+            function clickAll(show) {
+                return function () {
+                    var groups = document.getElementsByClassName("group");
+                    for (var i = 0; i < groups.length; i++) {
+                        if (show) {
+                            if (groups[i].classList.contains("strikeout"))
+                                groups[i].click();
+                        } else {
+                            if (!groups[i].classList.contains("strikeout"))
+                                groups[i].click();
+                        }
+                    }
+                };
+            }
+
+        }
+
+        function SaveAllMarkers() {
+            AllMarkersData = [];
+            AllMarkers.forEach((item) => {
+                AllMarkersData.push({
+                    id: item.options.id,
+                    icoPath: item.options.icoPath,
+                    group: item.options.group,
+                    category: item.options.category,
+                    lat: item.getLatLng().lat,
+                    lng: item.getLatLng().lng,
+                    popup: item.getPopup().getContent(),
+                    tooltip: item.getTooltip().getContent()
+
+                });
+            });
+            localStorage["AllMarkers"] = JSON.stringify(AllMarkersData);
+            LocationMarkersData = [];
+            LocationMarkers.forEach((item) => {
+                LocationMarkersData.push({
+                    id: item.options.id,
+                    location: item.options.location,
+                    lat: item.getLatLng().lat,
+                    lng: item.getLatLng().lng,
+                });
+            });
+            localStorage["AllLocationMarkers"] = JSON.stringify(LocationMarkersData);
+        }
+
+        function LoadAllMarkers() {
+            AllMarkers = [];
+            LocationMarkers = [];
+            //AllMarkersData = JSON.parse(localStorage["AllMarkers"]); load data from local storage
+            AllMarkersData = JSON.parse(getAllMarkersData());           //load data from markers.js
+            AllMarkersData.forEach((item) => {
+                var info = item;
+                var marker = L.marker([info.lat, info.lng], {
+                    draggable: false,
+                    id: info.id,
+                    group: info.group,
+                    category: info.category,
+                    icon: CreateIcon(info.icoPath),
+                    toolTipContent: info.tooltip,
+                    icoPath: info.icoPath
+                })
+                marker.bindPopup(info.popup);
+                marker.bindTooltip(info.tooltip, { direction: 'left' });
+                marker.addEventListener('contextmenu', openContextMenu);
+                AllMarkers.push(marker);
+            });
+            //AllLocationsData = JSON.parse(localStorage["AllLocationMarkers"]);  load data from local storage
+            AllLocationsData = JSON.parse(getLocationMarkersData());            //load data from markers.js
+            AllLocationsData.forEach((item) => {
+                var info = item;
+                var marker = L.marker([info.lat, info.lng], {
+                    draggable: false,
+                    id: info.id,
+                    icon: L.divIcon({ className: 'location-marker', html: '<div class="location-name">' + info.location + '</div>' }),
+                    location: info.location
+                })
+                LocationMarkers.push(marker);
+            });
+
+        }
+
+        function LoadMap() {
+            document.getElementById('ssmap').innerHTML = "<div id='map' style='width: 100%; height: 100%; background: #000000;'></div>";
+            map = L.map('map', { drawControl: true, zoomControl: false }).setView([0.0, 0.0], 1).setMaxBounds(new L.latLngBounds(L.latLng(-91, -270), L.latLng(91, 270)));
+
+            L.tileLayer('tiles/{z}/{x}/{y}.jpeg', {
+                maxNativeZoom: 7,
+                minZoom: 1,
+                maxZoom: 8,
+                noWrap: true,
+            }).addTo(map);
+
+            L.Control.LeftMenu = L.Control.extend({
+                onAdd: function (map) {
+                    var m = document.getElementById("sideMenu");
+                    L.DomEvent.disableClickPropagation(m);
+                    L.DomEvent.on(m, 'wheel', L.DomEvent.stopPropagation);
+                    return m;
+                },
+                onRemove: function (map) {
+                }
+            });
+            var menu = new L.Control.LeftMenu({ position: 'topleft' });
+            menu.addTo(map);
+
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+        }
+
+        function AddMarker() {
+            var prevMarker = AllMarkers[AllMarkers.length - 1];
+            var marker = L.marker([0, 0], {
+                draggable: true,
+                autoPan: true,
+                id: "marker" + AllMarkers.length.toString(),
+                group: prevMarker.options.group,
+                category: prevMarker.options.category,
+                icon: prevMarker.options.icon,
+                toolTipContent: prevMarker.options.tooltip,
+                icoPath: prevMarker.options.icoPath
+            })
+            marker.bindPopup(prevMarker.getPopup().getContent());
+            marker.bindTooltip(prevMarker.getTooltip().getContent(), { direction: 'left' });
+            marker.addEventListener('contextmenu', openContextMenu);
+            AllMarkers.push(marker);
+            marker.addTo(map);
+
+        }
+
+        function EditablePopup(e) {
+            var popup = L.popup({ keepInView: true, maxWidth: 800 })
+                .setLatLng([e.getLatLng().lat, e.getLatLng().lng])
+                .setContent(`
+                                        <div style="text-align:left;"><label>
+                                        <b>Category: </b></labe><input id="formCategory" type="text">
+                                        <b>Group: </b></labe><input id="formGroup" type="text">
+                                        <b>Id: </b></labe><input id="formId" type="text"><b>Icon name: </b></labe><input id="formIcon" type="text"> <br/>
+                                        <label><b>ToolTip:  </b></label>
+                                         <input id="formToolTip" type="text"></div>
+                                        <label><b>Popup Content:  </b></label><br/>
+                                        <textarea id="formPopup" cols="120" rows="20"></textarea>
+                                        <button id="saveMarkerButton"  style="float: right;  padding: 15px 32px;">Save</button>
+                                        </div>
+                                        `).openOn(map);
+            document.getElementById("formId").value = e.options.id;
+            document.getElementById("formIcon").value = e.options.icoPath;
+            document.getElementById("formCategory").value = e.options.category;
+            document.getElementById("formGroup").value = e.options.group;
+            document.getElementById("formToolTip").value = e.getTooltip().getContent();
+            document.getElementById("formPopup").value = e.getPopup().getContent();
+            var marker = e;
+            document.getElementById("saveMarkerButton").onclick = function (e) {
+                SaveMarker(marker);
+                document.getElementsByClassName("leaflet-popup-close-button")[0].click();
+                SaveAllMarkers();
+            }
+        }
+
+        function SaveMarker(marker) {
+            marker.getTooltip().setContent(document.getElementById("formToolTip").value);
+            marker.getPopup().setContent(document.getElementById("formPopup").value);
+            marker.options.id = document.getElementById("formId").value;
+            marker.options.group = document.getElementById("formGroup").value;
+            marker.options.category = document.getElementById("formCategory").value;
+            marker.options.icoPath = document.getElementById("formIcon").value;
+        }
+
+        function CreateIcon(path) {
+            return new L.icon({
+                iconUrl: 'images/markerIcons/' + path,
+                iconAnchor: [14, 14],
+                tooltipAnchor: [15, 0], // point of the icon which will correspond to marker's location
+                popupAnchor: [0, -16],// point from which the popup should open relative to the iconAnchor
+                className: "markerIcon"
+            });
+        }
+
+        function GetURLParameter(sParam) {
+            var sPageURL = window.location.search.substring(1);
+            var sURLVariables = sPageURL.split('&');
+            for (var i = 0; i < sURLVariables.length; i++) {
+                var sParameterName = sURLVariables[i].split('=');
+                if (sParameterName[0] == sParam) {
+                    return sParameterName[1];
+                }
+            }
+
+        }
+
+        function FlyToMarkerFromLinkOptions() {
+            var marker = GetURLParameter('markerId');
+            var zoom = GetURLParameter('zoom');
+            if (typeof marker !== 'undefined') {
+                marker = AllMarkers.find((item) => { return item.options.id == marker; });
+                if (typeof marker !== 'undefined') {
+                    marker.addTo(map);
+                    if (typeof zoom !== 'undefined')
+                        map.flyTo(marker.getLatLng(), parseInt(zoom, 10), { animate: false });
+                    else
+                        map.panTo(marker.getLatLng());
+                    marker.fire('click');
+                }
+            }
+            if (typeof zoom !== 'undefined')
+                map.setZoom(parseInt(zoom, 10));
+        }
+
+        function Search() {
+            if (document.getElementById('search-box').value.length < 3) {
+                if (document.getElementById('search-box').value.length == 0)
+                    document.getElementById('close-button').click();
+                return;
+            }
+
+            var id = setInterval(searching, 5);
+            function searching() {
+                if (document.getElementById("searching-icon").style.display == "none") {
+                    document.getElementById("searching-icon").style.display = "inline";
+                } else {
+                    var toSearch = document.getElementById('search-box').value.trim();
+                    document.getElementById("LayersPanel").style.display = "none";
+                    document.getElementById("search-results-panel").style.display = "block";
+                    document.getElementById("results").innerHTML = "";
+                    var results = AllMarkers.filter((item) => { return item.options.toolTipContent.toLowerCase().includes(toSearch.toLowerCase()); });
+                    for (var i = 0; i < results.length; i++) {
+                        var searchItem = document.createElement("span");
+                        searchItem.innerHTML = '<div>' + results[i].options.toolTipContent + "</div><div class='search-result-item-group'><i>" + results[i].options.category + ": " + results[i].options.group + "</i></div>";
+                        searchItem.className = "search-result-item";
+                        searchItem.style.display = "block";
+                        let marker = results[i];
+                        searchItem.onclick = () => {
+                            marker.addTo(map);
+                            map.flyTo(marker.getLatLng(), map.getZoom(), { animate: false });
+                            marker.fire('click');
+                        };
+                        document.getElementById("results").appendChild(searchItem);
+                    }
+                    document.getElementById("results-number").innerHTML = "Found " + results.length + " results for \"" + toSearch + "\".";
+                    document.getElementById("searching-icon").style.display = "none";
+                    clearInterval(id);
+                }
+            }
+        }
+
+        var delayTimer;
+        function StartSearching() {
+            clearTimeout(delayTimer);
+            delayTimer = setTimeout(Search, 300);
+        }
+        document.getElementById('search-box').oninput = StartSearching;
+    </script>
+    <!--TO EXECUTE-->
+    <script>
+        LoadAllMarkers();
+        LoadMap();
+        loadMarkersIntoCategories();
+        loadCategoriesIntoMap();
+        FlyToMarkerFromLinkOptions();
+        menu.show(0,0);
+        menu.hide();
+    </script>
+
+
+</body>
+</html>

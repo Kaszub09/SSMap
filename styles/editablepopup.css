@@ -1,0 +1,62 @@
+﻿body {
+    color: #c3c3c3;
+}
+.accordian {
+    transition: 0.4s;
+}
+
+.accordion > input[type="checkbox"] {
+    position: absolute;
+    left: -100vw;
+}
+
+.accordion .content {
+    overflow-y: hidden;
+    height: auto;
+    transition: max-height 0.5s ease;
+    max-height: 0px;
+    border: 1px solid #936ba9;
+}
+
+.accordion > input[type="checkbox"]:checked ~ .content {
+    height: auto;
+    max-height: 90px  !important;
+}
+
+.accordion label {
+    display: block;
+}
+
+/*
+ Styling
+*/
+
+
+
+.accordion label {
+    cursor: pointer;
+    vertical-align: middle;
+    font-size: 12px;
+
+}
+
+        .accordion label:hover,
+        .accordion label:focus {
+            background: #301a3c !important;
+            
+        }
+
+.accordion .handle label:before {
+    content: "▶";
+    display: inline-block;
+    margin-right: 10px;
+    font-size: 10px;
+}
+
+.accordion > input[type="checkbox"]:checked ~ .handle label:before {
+    content: "▲";
+}
+.accordion > input[type="checkbox"]:checked ~ .handle label {
+    background: #251330;
+}
+

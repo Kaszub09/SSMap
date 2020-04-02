@@ -11,6 +11,7 @@ Currently, all the info about markers is read from markers.js. If you would like
 4. Acces localStorage, copy AllMarkers value, format it into JSON (e.g. using notepad++ plugin), replace '\' with '\\' and copy/paste new markers at the end of markers.js
 
 ## Things that would be nice to have:
-- Storing markers info in database
-- Login, Registration
-- Mark as completed implementation
+1. Storing markers info in database
+2. Login, Registration
+3. Mark as completed implementation, requires 1
+But it's my first page in html/js ever, so I don't have skills\plans to do above.

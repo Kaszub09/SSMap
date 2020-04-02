@@ -1,4 +1,5 @@
 # Salt &amp; Sanctuary Interactive Map
+## https://kaszub09.github.io/SSMap/
 Map was created using screenshot map by **u/magicofgames** from reddit: https://www.reddit.com/r/saltandsanctuary/comments/f0t1sa/ultimate_map_still_wip_well_no_but_actually_yes/
 
 

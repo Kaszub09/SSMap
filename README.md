@@ -9,7 +9,7 @@ Currently, all the info about markers is read from markers.js. If you would like
 1. Download repo.
 2. Uncomment Save and Add new marker buttons and set markers draggable to true in index.html. (Optionally change to read markers from localStorage instead of file)
 3. Now you can edit markers. All changes are save in localStorage.
-4. Acces localStorage, copy AllMarkers value,  replace '\' with '\\' if necessary, and copy/paste new markers to the string ing markers.js
+4. Acces localStorage, copy AllMarkers value,  replace '\\' with '\\\\' if necessary, and copy/paste new markers to the string in markers.js
 
 
 ## Things that would be nice to have:

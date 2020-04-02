@@ -230,7 +230,7 @@
             }
             hideAll.click();
             locations.click();
-            map.setZoom(2);
+            
             function categoryClick(groupList) {
                 return function () {
                     var atLeastOneOn = false;
@@ -451,9 +451,10 @@
                         map.panTo(marker.getLatLng());
                     marker.fire('click');
                 }
-            }
-            if (typeof zoom !== 'undefined')
+            }else if (typeof zoom !== 'undefined')
                 map.setZoom(parseInt(zoom, 10));
+            else
+                map.setZoom(2);
         }
 
         function Search() {

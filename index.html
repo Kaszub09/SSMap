@@ -357,7 +357,7 @@
             menu.addTo(map);
 
             L.control.zoom({ position: 'bottomright' }).addTo(map);
-            map.attributionControl.addAttribution('<a href="https://github.com/Kaszub09/SSMap"> | About project</a>');
+            map.attributionControl.addAttribution('<a href="https://github.com/Kaszub09/SSMap"> | About project</a><a href="https://paypal.me/kaszub09">  |  Support Me</a>');
         }
 
         function AddMarker() {
@@ -460,12 +460,6 @@
         }
 
         function Search() {
-            if (document.getElementById('search-box').value.length < 3) {
-                if (document.getElementById('search-box').value.length == 0)
-                    document.getElementById('close-button').click();
-                return;
-            }
-
             var id = setInterval(searching, 5);
             function searching() {
                 if (document.getElementById("searching-icon").style.display == "none") {
@@ -476,6 +470,15 @@
                     document.getElementById("search-results-panel").style.display = "block";
                     document.getElementById("results").innerHTML = "";
                     var results = AllMarkers.filter((item) => { return item.options.toolTipContent.toLowerCase().includes(toSearch.toLowerCase()); });
+                    results.sort(function (a, b) {
+                        if (a.options.category == b.options.category) {
+                            if (a.options.group == b.options.group) 
+                                return a.options.toolTipContent > b.options.toolTipContent;
+                            else
+                                return a.options.group > b.options.group;
+                        }else
+                            return a.options.category > b.options.category;
+                    });
                     for (var i = 0; i < results.length; i++) {
                         var searchItem = document.createElement("span");
                         searchItem.innerHTML = '<div>' + results[i].options.toolTipContent + "</div><div class='search-result-item-group'><i>" + results[i].options.category + ": " + results[i].options.group + "</i></div>";

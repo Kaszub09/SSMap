@@ -16,4 +16,5 @@ Currently, all the info about markers is read from markers.js. If you would like
 1. Storing markers info in database
 2. Login, Registration
 3. Mark as completed implementation, requires 1
+
 Since it's my first page in html/js ever, so I don't have skills\plans to do above.

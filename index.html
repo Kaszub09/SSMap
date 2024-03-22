@@ -310,7 +310,8 @@
                     category: info.category,
                     icon: CreateIcon(info.icoPath),
                     toolTipContent: info.tooltip,
-                    icoPath: info.icoPath
+                    icoPath: info.icoPath,
+                    zIndexOffset: 1000
                 })
                 marker.bindPopup(info.popup);
                 marker.bindTooltip(info.tooltip, { direction: 'left' });
